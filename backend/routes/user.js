@@ -25,7 +25,7 @@ userRouter.post("/signup",async (req,res)=>{
     }
 
     const {firstName, lastName, username, password} = req.body;
-    const user = User.findOne({
+    const user = await User.findOne({
         username: username
     })
 
@@ -97,6 +97,35 @@ userRouter.post('/signin',async (req, res)=>{
     res.status(411).jsonb({
         message:"Error while signing in"
     })
+})
+
+userRouter.put('/update', authMiddleware, async (req,res)=>{
+    const updateBody = z.object({
+        firstName: z.string().optional(),
+        lastName: z.string().optional(),
+        username: z.string().optional(),
+        password: z.string().min(6).max(30).refine((value)=>/[A-Z]/.test(value)).refine((value)=>/[a-z]/.test(value)).refine((value) => /[0-9]/.test(value)).refine((value)=>/[\W_]/.test(value)).optional(),
+    })
+
+    const updateSuccess = await updateBody.safeParseAsync(req.body)
+    if(!updateSuccess.success){
+        return res.status(411).json({
+            message: "Error while updating user information"
+        })
+    }
+
+    const updates = updateSuccess.data;
+
+    if (updates.password) {
+        updates.password = await bcrypt.hash(updates.password, 5);
+    }
+
+    try {
+        await User.updateOne({ _id: req.userId }, updates);
+        res.json({ message: "Updated successfully" });
+    } catch (err) {
+        res.status(500).json({ message: "Internal Server Error" });
+    }
 })
 
 module.exports = userRouter
