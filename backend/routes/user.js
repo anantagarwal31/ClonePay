@@ -5,6 +5,7 @@ const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
 const { JWT_SECRET } = require("../config");
 const { User } = require("../db");
+const { authMiddleware } = require("../middleware");
 
 userRouter.post("/signup",async (req,res)=>{
     const reqBody = z.object({
@@ -64,6 +65,38 @@ userRouter.post("/signup",async (req,res)=>{
             message:"You have signed up successfully"
         })
     }
+})
+
+userRouter.post('/signin',async (req, res)=>{
+    const {username, password} = req.body;
+
+    const user = User.findOne({
+        username: username
+    });
+
+    if(!user){
+        res.status(403).json({
+            message:"User not found"
+        })
+        return
+    }
+
+    const matchPass = bcrypt.compare(password, user.password)
+
+    if(matchPass){
+        const token = jwt.sign({
+            userId: user._id
+        },JWT_SECRET);
+
+        res.json({
+            token: token
+        })
+        return
+    }
+
+    res.status(411).jsonb({
+        message:"Error while signing in"
+    })
 })
 
 module.exports = userRouter

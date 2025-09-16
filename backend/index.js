@@ -2,11 +2,11 @@ require("dotenv").config()
 const express = require("express");
 const mongoose = require("mongoose")
 const cors = require("cors")
-const app = express();
-const router = require("./routes/index")
-app.use("/api/v1", router)
-app.use(express.json());
 app.use(cors());
+app.use(express.json());
+const router = require("./routes/index")
+const app = express();
+app.use("/api/v1", router)
 
 async function main(){
     try{
