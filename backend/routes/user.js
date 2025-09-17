@@ -17,26 +17,22 @@ userRouter.post("/signup",async (req,res)=>{
 
     const parsedReqBody = reqBody.safeParseAsync(req.body);
     if(!parsedReqBody.success){
-        res.json({
-            message:"Incorrect format",
-            error: parsedReqBody.error
+        return res.json({
+            message:"Incorrect format"
         });
-        return
     }
 
     const {firstName, lastName, username, password} = req.body;
-    const user = await User.findOne({
+    const alreadyExists = await User.findOne({
         username: username
     })
 
-    if(user){
-        res.json({
+    if(alreadyExists){
+        return res.json({
             message:"User already exists"
         });
-        return
     }
 
-    let errorThrown = false;
     try{
         const hashedPass = await bcrypt.hash(password,5);
 
@@ -52,18 +48,16 @@ userRouter.post("/signup",async (req,res)=>{
         const token = jwt.sign({
             userId
         },JWT_SECRET);
+
+        res.json({
+            message:"You have signed up successfully",
+            token: token
+        })
     }
-    catch(e){
+    catch(error){
         res.json({
             error
         });
-        errorThrown = true;
-    }
-
-    if(!errorThrown){
-        res.json({
-            message:"You have signed up successfully"
-        })
     }
 })
 
@@ -75,28 +69,30 @@ userRouter.post('/signin',async (req, res)=>{
     });
 
     if(!user){
-        res.status(403).json({
+        return res.status(403).json({
             message:"User not found"
         })
-        return
     }
 
-    const matchPass = bcrypt.compare(password, user.password)
+    try{
+        const matchPass = bcrypt.compare(password, user.password)
 
-    if(matchPass){
-        const token = jwt.sign({
-            userId: user._id
-        },JWT_SECRET);
+        if(matchPass){
+            const token = jwt.sign({
+                userId: user._id
+            },JWT_SECRET);
 
-        res.json({
-            token: token
+            res.json({
+                token: token
+            })
+            return
+        }
+    }
+    catch(error){
+        res.status(411).jsonb({
+            error
         })
-        return
     }
-
-    res.status(411).jsonb({
-        message:"Error while signing in"
-    })
 })
 
 userRouter.put('/update', authMiddleware, async (req,res)=>{
@@ -110,7 +106,7 @@ userRouter.put('/update', authMiddleware, async (req,res)=>{
     const updateSuccess = await updateBody.safeParseAsync(req.body)
     if(!updateSuccess.success){
         return res.status(411).json({
-            message: "Error while updating user information"
+            message: "Incorrect format"
         })
     }
 
@@ -123,8 +119,8 @@ userRouter.put('/update', authMiddleware, async (req,res)=>{
     try {
         await User.updateOne({ _id: req.userId }, updates);
         res.json({ message: "Updated successfully" });
-    } catch (err) {
-        res.status(500).json({ message: "Internal Server Error" });
+    } catch (error) {
+        res.status(500).json({error});
     }
 })
 
@@ -145,10 +141,10 @@ userRouter.get('/bulk', async (req,res)=>{
 
     res.json({
         user:users.map(user=>({
-            username:user.username,
-            firstName:user.firstName,
-            lastName:user.lastName,
-            _id:user._id
+            username: user.username,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            _id: user._id
         }))
     })
 })
