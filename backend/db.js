@@ -5,20 +5,24 @@ const userSchema = new Schema({
     firstName: {
         type: String,
         required: true,
+        trim: true
     },
     lastName: {
         type: String,
         required: true,
+        trim: true
     },
     username: {
         type: String,
         required: true,
+        trim: true
     },
     password: {
         type: String,
         required: true,
         minLength: 6,
-        maxLenght: 30
+        maxLenght: 30,
+        trim: true
     }
 })
 
@@ -26,7 +30,7 @@ const accountSchema = new Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true
+        required: true,
     },
     balance: {
         type: Number,

@@ -4,7 +4,7 @@ const { z } = require("zod")
 const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
 const { JWT_SECRET } = require("../config");
-const { User } = require("../db");
+const { User, Account } = require("../db");
 const { authMiddleware } = require("../middleware");
 
 userRouter.post("/signup",async (req,res)=>{
@@ -42,6 +42,11 @@ userRouter.post("/signup",async (req,res)=>{
             username: username,
             password: hashedPass
         });
+
+        await Account.create({
+            userId,
+            balance: 1+ Math.random()*10000
+        })
 
         const userId = user._id;
 
