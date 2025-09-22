@@ -15,7 +15,7 @@ userRouter.post("/signup",async (req,res)=>{
         password: z.string().min(6).max(30).refine((value)=>/[A-Z]/.test(value)).refine((value)=>/[a-z]/.test(value)).refine((value) => /[0-9]/.test(value)).refine((value)=>/[\W_]/.test(value))
     })
 
-    const parsedReqBody = reqBody.safeParseAsync(req.body);
+    const parsedReqBody = await reqBody.safeParseAsync(req.body);
     if(!parsedReqBody.success){
         return res.json({
             message:"Incorrect format"
@@ -43,12 +43,12 @@ userRouter.post("/signup",async (req,res)=>{
             password: hashedPass
         });
 
+        const userId = user._id;
+
         await Account.create({
             userId,
             balance: 1+ Math.random()*10000
         })
-
-        const userId = user._id;
 
         const token = jwt.sign({
             userId
@@ -61,7 +61,7 @@ userRouter.post("/signup",async (req,res)=>{
     }
     catch(error){
         res.json({
-            error
+            error: error.message
         });
     }
 })
@@ -69,7 +69,12 @@ userRouter.post("/signup",async (req,res)=>{
 userRouter.post('/signin',async (req, res)=>{
     const {username, password} = req.body;
 
-    const user = User.findOne({
+    if (!username || !password) {
+        return res.status(400).json({ message: "Username and password are required" });
+    }
+
+
+    const user = await User.findOne({
         username: username
     });
 
@@ -80,7 +85,7 @@ userRouter.post('/signin',async (req, res)=>{
     }
 
     try{
-        const matchPass = bcrypt.compare(password, user.password)
+        const matchPass = await bcrypt.compare(password, user.password)
 
         if(matchPass){
             const token = jwt.sign({
@@ -91,11 +96,13 @@ userRouter.post('/signin',async (req, res)=>{
                 token: token
             })
             return
+        } else {
+            return res.status(403).json({ message: "Incorrect password" });
         }
     }
     catch(error){
-        res.status(411).jsonb({
-            error
+        res.status(411).json({
+            error: error.message
         })
     }
 })
@@ -125,7 +132,7 @@ userRouter.put('/update', authMiddleware, async (req,res)=>{
         await User.updateOne({ _id: req.userId }, updates);
         res.json({ message: "Updated successfully" });
     } catch (error) {
-        res.status(500).json({error});
+        res.status(500).json({error: error.message});
     }
 })
 
